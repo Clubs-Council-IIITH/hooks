@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+# config
+BRANCH="master"
+WORK_TREE_DIR="/home/git/worktrees"
+
+while read oldrev newrev ref; do
+  if [ "$ref" = "refs/heads/$BRANCH" ]; then
+    echo "Ref $ref received. Updating hooks from [$BRANCH]..."
+
+    # check out to worktree
+    mkdir -p "$WORK_TREE_DIR/hooks"
+    GIT_WORK_TREE="$WORK_TREE_DIR/hooks" git checkout -f $BRANCH
+
+    echo "Updated hooks from [$BRANCH] successfully!"
+  else
+    echo "Ref $ref received. Doing nothing: only [$BRANCH] may be deployed on this server."
+  fi
+done
