@@ -11,6 +11,10 @@ while read oldrev newrev ref; do
     # check out to worktree
     mkdir -p "$WORK_TREE_DIR/hooks"
     GIT_WORK_TREE="$WORK_TREE_DIR/hooks" git checkout -f $BRANCH
+    cd "$WORK_TREE_DIR/hooks"
+
+    # update permissions
+    find . -type f -exec chmod ug+x {} \;
 
     echo "Updated hooks from [$BRANCH] successfully!"
   else
