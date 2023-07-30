@@ -3,7 +3,7 @@
 # config
 BRANCH="master"
 IMAGE_PREFIX="cc-"
-WORK_TREE_DIR="/tmp/cc/deployments"
+WORK_TREE_DIR="/home/git/worktrees"
 
 while read oldrev newrev ref; do
   if [ "$ref" = "refs/heads/$BRANCH" ]; then
