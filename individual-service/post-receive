@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+
+# config
+BRANCH="master"
+IMAGE_PREFIX="cc-"
+WORK_TREE_DIR="/tmp/cc/deployments"
+
+while read oldrev newrev ref; do
+  if [ "$ref" = "refs/heads/$BRANCH" ]; then
+    echo "Ref $ref received. Building image from [$BRANCH]..."
+
+    # generate image name using current repo name
+    image_name="$IMAGE_PREFIX`basename $(pwd) | tr \'[:upper:]\' \'[:lower:]\' | sed 's/.git$//'`"
+
+    # get last commit hash to use as tag
+    last_commit=`git log --pretty=format:'%h' -n 1`
+
+    # check out to worktree
+    mkdir -p "$WORK_TREE_DIR/$image_name"
+    GIT_WORK_TREE="$WORK_TREE_DIR/$image_name" git checkout -f $BRANCH
+    cd "$WORK_TREE_DIR/$image_name"
+
+    # build image
+    docker build -t $image_name .
+
+    # add commit tag to image
+    docker tag $image_name:latest $image_name:$last_commit
+
+    # verify build status
+    if [ $? -ne 0 ]; then
+      echo "Build failed! Aborting."
+      exit 1
+    fi
+
+    echo "Built image $image_name:$last_commit from [$BRANCH] successfully!"
+  else
+    echo "Ref $ref received. Doing nothing: only [$BRANCH] may be deployed on this server."
+  fi
+done
+
