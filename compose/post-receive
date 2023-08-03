@@ -8,6 +8,8 @@ while read oldrev newrev ref; do
   if [ "$ref" = "refs/heads/$BRANCH" ]; then
     echo "Ref $ref received. Deploying [$BRANCH]..."
 
+    echo `env`
+
     # check out to worktree
     mkdir -p "$WORK_TREE_DIR/services"
     GIT_WORK_TREE="$WORK_TREE_DIR/services" git checkout -f $BRANCH
