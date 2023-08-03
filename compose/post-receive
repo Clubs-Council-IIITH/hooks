@@ -2,6 +2,7 @@
 
 # config
 BRANCHES=("prod" "staging")
+PROJECT_PREFIX="cc-"
 WORK_TREE_DIR="/home/git/worktrees"
 
 while read oldrev newrev ref; do
@@ -15,7 +16,7 @@ while read oldrev newrev ref; do
     cd "$WORK_TREE_DIR/services"
 
     # deploy new images
-    docker compose -f docker-compose.$branch.yml -p cc-$branch up -d
+    docker compose -f docker-compose.$branch.yml -p $PROJECT_PREFIX$branch up -d
 
     # verify build status
     if [ $? -ne 0 ]; then
