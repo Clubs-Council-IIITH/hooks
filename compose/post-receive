@@ -1,22 +1,21 @@
 #!/usr/bin/env bash
 
 # config
-BRANCH="staging"
+BRANCHES=("prod" "staging")
 WORK_TREE_DIR="/home/git/worktrees"
 
 while read oldrev newrev ref; do
-  if [ "$ref" = "refs/heads/$BRANCH" ]; then
-    echo "Ref $ref received. Deploying [$BRANCH]..."
-
-    echo `env`
+  branch=`echo $ref | rev | cut -d / -f 1 | rev`
+  if [[ " ${BRANCHES[*]} " =~ " $branch " ]];
+    echo "Ref $ref received. Deploying [$branch]..."
 
     # check out to worktree
     mkdir -p "$WORK_TREE_DIR/services"
-    GIT_WORK_TREE="$WORK_TREE_DIR/services" git checkout -f $BRANCH
+    GIT_WORK_TREE="$WORK_TREE_DIR/services" git checkout -f $branch
     cd "$WORK_TREE_DIR/services"
 
     # deploy new images
-    docker compose -f docker-compose.$BRANCH.yml -p cc-$BRANCH up -d
+    docker compose -f docker-compose.$branch.yml -p cc-$branch up -d
 
     # verify build status
     if [ $? -ne 0 ]; then
@@ -24,9 +23,9 @@ while read oldrev newrev ref; do
       exit 1
     fi
 
-    echo "Deployed [$BRANCH] successfully!"
+    echo "Deployed [$branch] successfully!"
   else
-    echo "Ref $ref received. Doing nothing: only [$BRANCH] may be deployed on this server."
+    echo "Ref $ref received. Doing nothing: only [${BRANCHES[*]}] may be deployed on this server."
   fi
 done
 
