@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+# config
+BRANCH="staging"
+WORK_TREE_DIR="/home/git/worktrees"
+
+while read oldrev newrev ref; do
+  if [ "$ref" = "refs/heads/$BRANCH" ]; then
+    echo "Ref $ref received. Deploying [$BRANCH]..."
+
+    # check out to worktree
+    mkdir -p "$WORK_TREE_DIR/services"
+    GIT_WORK_TREE="$WORK_TREE_DIR/services" git checkout -f $BRANCH
+    cd "$WORK_TREE_DIR/services"
+
+    # deploy new images
+    docker compose -f docker-compose.$BRANCH.yml -p cc-$BRANCH up -d
+
+    # verify build status
+    if [ $? -ne 0 ]; then
+      echo "Build failed! Aborting."
+      exit 1
+    fi
+
+    echo "Deployed [$BRANCH] successfully!"
+  else
+    echo "Ref $ref received. Doing nothing: only [$BRANCH] may be deployed on this server."
+  fi
+done
+
