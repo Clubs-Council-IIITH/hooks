@@ -6,7 +6,7 @@ WORK_TREE_DIR="/home/git/worktrees"
 
 while read oldrev newrev ref; do
   branch=`echo $ref | rev | cut -d / -f 1 | rev`
-  if [[ " ${BRANCHES[*]} " =~ " $branch " ]];
+  if [[ " ${BRANCHES[*]} " =~ " $branch " ]]; then
     echo "Ref $ref received. Deploying [$branch]..."
 
     # check out to worktree
