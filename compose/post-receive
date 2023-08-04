@@ -43,7 +43,7 @@ while read oldrev newrev ref; do
       | grep -v ^Entering | sort -r -o nginx/static/mdx/logs.mdx
 
     # deploy new images
-    docker compose -f docker-compose.$branch.yml -p $PROJECT_PREFIX$branch up -d
+    docker compose -f docker-compose.$branch.yml -p $PROJECT_PREFIX$branch up --build -d
 
     # verify build status
     if [ $? -ne 0 ]; then
@@ -52,8 +52,8 @@ while read oldrev newrev ref; do
     fi
 
     # clean up worktree
-    # git checkout .
-    # rm -rf ./services
+    git checkout .
+    rm -rf ./services
 
     echo "Deployed [$branch] successfully!"
   else
