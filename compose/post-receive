@@ -10,12 +10,17 @@ while read oldrev newrev ref; do
   if [[ " ${BRANCHES[*]} " =~ " $branch " ]]; then
     echo "Ref $ref received. Deploying [$branch]..."
 
+    # set env vars for git
+    export GIT_DIR=`pwd`
+    export GIT_WORK_TREE="$WORK_TREE_DIR/services"
+
     # check out to worktree
-    mkdir -p "$WORK_TREE_DIR/services"
-    GIT_WORK_TREE="$WORK_TREE_DIR/services" git checkout -f $branch
-    cd "$WORK_TREE_DIR/services"
+    mkdir -p $GIT_WORK_TREE
+    git checkout -f $branch
+    cd $GIT_WORK_TREE
 
     # update status
+    echo "Updating deployment status..."
     echo `jq \
       --arg commit "$(git rev-parse HEAD | head -c 7)" \
       --arg timestamp "$(date --iso-8601=ns | cut -d, -f 1)" \
@@ -32,6 +37,7 @@ while read oldrev newrev ref; do
     git -c submodule.auth-dev.update=none submodule update --init --recursive
 
     # update changelog
+    echo "Updating changelog..."
     git submodule foreach \
       'git log --no-merges --oneline --date=short --pretty=format:"**%ad:** [$name] %s  " | cat && echo' \
       | grep -v ^Entering | sort -r -o static/mdx/logs.mdx
