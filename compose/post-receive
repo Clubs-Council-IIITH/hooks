@@ -29,12 +29,12 @@ while read oldrev newrev ref; do
       static/json/status.json` > static/json/status.json
 
     # configure local submodule repos
-    sed -i "s/github.com:Clubs-Council-IIITH\//clubs.iiit.ac.in:/g" .gitmodules
-    git submodule add -b $branch git@clubs.iiit.ac.in:services.git
+    sed -i "s|git@github.com:Clubs-Council-IIITH|$HOME|g" .gitmodules
+    git submodule add -b $branch $HOME/services.git
     rm services/.gitmodules
 
     # pull submodules (except auth-dev)
-    git -c submodule.auth-dev.update=none submodule update --init --recursive
+    git -c submodule.auth-dev.update=none submodule update --init
 
     # update changelog
     echo "Updating changelog..."
