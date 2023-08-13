@@ -34,7 +34,7 @@ while read oldrev newrev ref; do
     rm services/.gitmodules
 
     # pull submodules (except auth-dev)
-    git -c submodule.auth-dev.update=none submodule update --init
+    git -c submodule.apis/auth-dev.update=none submodule update --init
 
     # update changelog
     echo "Updating changelog..."
