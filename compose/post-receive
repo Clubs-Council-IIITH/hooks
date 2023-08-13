@@ -30,7 +30,7 @@ while read oldrev newrev ref; do
 
     # configure local submodule repos
     sed -i "s|git@github.com:Clubs-Council-IIITH|$HOME|g" .gitmodules
-    git submodule add -b $branch $HOME/services.git
+    git submodule add -b origin/$branch $HOME/services.git
     rm services/.gitmodules
 
     # pull submodules (except auth-dev)
