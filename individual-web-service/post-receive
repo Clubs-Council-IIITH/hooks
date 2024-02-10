@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+# config
+BRANCHES=("prod")
+PROJECT_PREFIX="slc-"
+WORK_TREE_DIR="/home/git/worktrees"
+
+while read oldrev newrev ref; do
+  branch=`echo $ref | rev | cut -d / -f 1 | rev`
+  if [[ " ${BRANCHES[*]} " =~ " $branch " ]]; then
+    echo "Ref $ref received. Deploying [$branch]..."
+
+    image_name=`basename $(pwd) | tr \'[:upper:]\' \'[:lower:]\' | sed 's/.git$//'`
+
+    # set env vars for git
+    export GIT_DIR=`pwd`
+    export GIT_WORK_TREE="$WORK_TREE_DIR/$image_name"
+
+    # check out to worktree
+    mkdir -p $GIT_WORK_TREE
+    git checkout -f $branch
+    cd $GIT_WORK_TREE
+
+    # deploy new images
+    docker compose -f docker-compose.$branch.yml -p $PROJECT_PREFIX$branch up --build -d
+
+    # verify build status
+    if [ $? -ne 0 ]; then
+      echo "Build failed! Aborting."
+      exit 1
+    fi
+
+    # clean up worktree
+    git checkout -f $branch
+
+    echo "Deployed [$branch] successfully!"
+  else
+    echo "Ref $ref received. Doing nothing: only [${BRANCHES[*]}] may be deployed on this server."
+  fi
+done
+
