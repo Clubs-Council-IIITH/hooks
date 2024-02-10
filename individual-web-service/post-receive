@@ -11,6 +11,7 @@ while read oldrev newrev ref; do
     echo "Ref $ref received. Deploying [$branch]..."
 
     image_name=`basename $(pwd) | tr \'[:upper:]\' \'[:lower:]\' | sed 's/.git$//'`
+    project_prefix=`echo $PROJECT_PREFIX$image_name-`
 
     # set env vars for git
     export GIT_DIR=`pwd`
@@ -22,7 +23,7 @@ while read oldrev newrev ref; do
     cd $GIT_WORK_TREE
 
     # deploy new images
-    docker compose -f docker-compose.$branch.yml -p $PROJECT_PREFIX$branch up --build -d
+    docker compose -f docker-compose.$branch.yml -p $project_prefix$branch up --build -d
 
     # verify build status
     if [ $? -ne 0 ]; then
