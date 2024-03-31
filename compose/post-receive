@@ -39,7 +39,9 @@ while read oldrev newrev ref; do
     # update changelog
     echo "Updating changelog..."
     git submodule foreach \
-      'git log --no-merges --oneline --date=short --pretty=format:"**%ad:** [$name] %s  " | cat && echo' \
+      'git log --no-merges --oneline --date=short --pretty=format:"**%ad:** [$name] %s  " | 
+      grep -v -e "Apply Linting & Formatting Fixes" -e "Apply Prettier Formatting Fixes" | 
+      cat && echo' \
       | grep -v ^Entering | sort -r -o nginx/static/mdx/logs.mdx
 
     # deploy new images
