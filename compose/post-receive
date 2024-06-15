@@ -41,6 +41,7 @@ while read oldrev newrev ref; do
     git submodule foreach \
       'git log --no-merges --oneline --date=short --pretty=format:"**%ad:** [$name] %s  " | 
       grep -v -e "Apply Linting & Formatting Fixes" -e "Apply Prettier Formatting Fixes" | 
+      grep -vi "sitemap" |
       cat && echo' \
       | grep -v ^Entering | sort -r -o nginx/static/mdx/logs.mdx
 
