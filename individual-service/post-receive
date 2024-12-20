@@ -10,7 +10,8 @@ while read oldrev newrev ref; do
     echo "Ref $ref received. Building image from [$BRANCH]..."
 
     # generate image name using current repo name
-    image_name="$IMAGE_PREFIX`basename $(pwd) | tr \'[:upper:]\' \'[:lower:]\' | sed 's/.git$//'`"
+    repo_name=`basename $(pwd) | tr \'[:upper:]\' \'[:lower:]\' | sed 's/.git$//'`
+    image_name="$IMAGE_PREFIX$repo_name"
 
     # get last commit hash to use as tag
     last_commit=`git log --pretty=format:'%h' -n 1`
@@ -19,6 +20,21 @@ while read oldrev newrev ref; do
     mkdir -p "$WORK_TREE_DIR/$image_name"
     GIT_WORK_TREE="$WORK_TREE_DIR/$image_name" git checkout -f $BRANCH
     cd "$WORK_TREE_DIR/$image_name"
+
+    if [ -f $CC_CONFIG_PATH/prod/global ]; then
+        echo "Loading global environment file..."
+        cp $CC_CONFIG_PATH/prod/global .env
+    else
+        echo "Environment file $CC_CONFIG_PATH/prod/global not found. Skipping..."
+    fi
+
+    # Now load env file of the same name as image
+    if [ -f $CC_CONFIG_PATH/prod/$repo_name ]; then
+        echo "Loading $repo_name environment file..."
+        cp $CC_CONFIG_PATH/prod/$repo_name .env.local
+    else
+        echo "Environment file $CC_CONFIG_PATH/prod/$repo_name not found. Skipping..."
+    fi
 
     # build image
     docker build -t $image_name .
