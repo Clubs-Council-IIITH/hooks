@@ -23,7 +23,7 @@ while read oldrev newrev ref; do
     echo "Updating deployment status..."
     echo `jq \
       --arg commit "$(git rev-parse HEAD | head -c 7)" \
-      --arg timestamp "$(date --iso-8601=ns | cut -d, -f 1)" \
+      --arg timestamp "$(TZ='Asia/Kolkata' date --iso-8601=ns | cut -d, -f1)" \
       --arg environment "$branch" \
       '.commit = $commit | .timestamp = $timestamp | .environment = $environment' \
       nginx/static/json/status.json` > nginx/static/json/status.json
