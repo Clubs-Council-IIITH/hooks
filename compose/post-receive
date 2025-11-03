@@ -57,9 +57,17 @@ while read oldrev newrev ref; do
     export IMAGE_TAG_MEMBERS=$(cd subgraphs/members && git log --pretty=format:'%h' -n 1)
     export IMAGE_TAG_EVENTS=$(cd subgraphs/events && git log --pretty=format:'%h' -n 1)
     export IMAGE_TAG_USERS=$(cd subgraphs/users && git log --pretty=format:'%h' -n 1)
-    
-    # Feeder (if needed)
-    # export IMAGE_TAG_FEEDER=$(cd feeder && git log --pretty=format:'%h' -n 1)
+
+    # Check if the docker images with these tags exist, if not, fallback to 'latest'
+    for service in web gateway auth files interfaces clubs members events users; do
+      image_name="$PROJECT_PREFIX$service"
+      image_tag_var="IMAGE_TAG_$(echo $service | tr '[:lower:]' '[:upper:]')"
+      image_tag=${!image_tag_var}
+      if [[ -z $(docker images -q $image_name:$image_tag) ]]; then
+        echo "Image $image_name with tag $image_tag not found. Falling back to 'latest' tag."
+        export $image_tag_var="latest"
+      fi
+    done
 
     echo "Using Image tags:"
     echo "  web: $IMAGE_TAG_WEB"
