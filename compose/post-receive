@@ -19,10 +19,13 @@ while read oldrev newrev ref; do
     git checkout -f $branch
     cd $GIT_WORK_TREE
 
+    # get commit hash for main repo
+    COMMIT_HASH=$(git rev-parse HEAD | head -c 7)
+
     # update status
     echo "Updating deployment status..."
     echo `jq \
-      --arg commit "$(git rev-parse HEAD | head -c 7)" \
+      --arg commit "$COMMIT_HASH" \
       --arg timestamp "$(TZ='Asia/Kolkata' date --iso-8601=ns | cut -d, -f1)" \
       --arg environment "$branch" \
       '.commit = $commit | .timestamp = $timestamp | .environment = $environment' \
@@ -39,6 +42,36 @@ while read oldrev newrev ref; do
     # pull submodules (except auth-dev)
     git -c submodule.apis/auth-dev.update=none submodule update --init
 
+    # extract commit hashes for each microservice
+    echo "Extracting commit hashes for microservices..."
+    
+    # Main services
+    export IMAGE_TAG_WEB=$(cd web && git log --pretty=format:'%h' -n 1)
+    export IMAGE_TAG_GATEWAY=$(cd gateway && git log --pretty=format:'%h' -n 1)
+    export IMAGE_TAG_AUTH=$(cd apis/auth && git log --pretty=format:'%h' -n 1)
+    export IMAGE_TAG_FILES=$(cd apis/files && git log --pretty=format:'%h' -n 1)
+    
+    # Subgraphs
+    export IMAGE_TAG_INTERFACES=$(cd subgraphs/interfaces && git log --pretty=format:'%h' -n 1)
+    export IMAGE_TAG_CLUBS=$(cd subgraphs/clubs && git log --pretty=format:'%h' -n 1)
+    export IMAGE_TAG_MEMBERS=$(cd subgraphs/members && git log --pretty=format:'%h' -n 1)
+    export IMAGE_TAG_EVENTS=$(cd subgraphs/events && git log --pretty=format:'%h' -n 1)
+    export IMAGE_TAG_USERS=$(cd subgraphs/users && git log --pretty=format:'%h' -n 1)
+    
+    # Feeder (if needed)
+    # export IMAGE_TAG_FEEDER=$(cd feeder && git log --pretty=format:'%h' -n 1)
+
+    echo "Using Image tags:"
+    echo "  web: $IMAGE_TAG_WEB"
+    echo "  gateway: $IMAGE_TAG_GATEWAY"
+    echo "  auth: $IMAGE_TAG_AUTH"
+    echo "  files: $IMAGE_TAG_FILES"
+    echo "  interfaces: $IMAGE_TAG_INTERFACES"
+    echo "  clubs: $IMAGE_TAG_CLUBS"
+    echo "  members: $IMAGE_TAG_MEMBERS"
+    echo "  events: $IMAGE_TAG_EVENTS"
+    echo "  users: $IMAGE_TAG_USERS"
+
     # update changelog
     echo "Updating changelog..."
     git submodule foreach \
@@ -48,7 +81,8 @@ while read oldrev newrev ref; do
       cat && echo' \
       | grep -v ^Entering | sort -r -o nginx/static/mdx/logs.mdx
 
-    # deploy new images
+    # deploy new images with commit hash tags
+    echo "Building and deploying services..."
     docker compose -f docker-compose.$branch.yml -p $PROJECT_PREFIX$branch up --build -d
 
     # verify build status
@@ -66,4 +100,3 @@ while read oldrev newrev ref; do
     echo "Ref $ref received. Doing nothing: only [${BRANCHES[*]}] may be deployed on this server."
   fi
 done
-
