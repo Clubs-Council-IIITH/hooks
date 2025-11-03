@@ -63,7 +63,7 @@ while read oldrev newrev ref; do
       image_name="$PROJECT_PREFIX$service"
       image_tag_var="IMAGE_TAG_$(echo $service | tr '[:lower:]' '[:upper:]')"
       image_tag=${!image_tag_var}
-      if [[ -z $(docker images -q $image_name:$image_tag) ]]; then
+      if [[ -z $(docker images -q "$image_name:$image_tag") ]]; then
         echo "Image $image_name with tag $image_tag not found. Falling back to 'latest' tag."
         export $image_tag_var="latest"
       fi
