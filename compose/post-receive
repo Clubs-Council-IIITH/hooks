@@ -46,8 +46,21 @@ while read oldrev newrev ref; do
     # pull submodules (except auth-dev)
     git -c submodule.apis/auth-dev.update=none submodule update --init
 
+    # update changelog
+    echo "Updating changelog..."
+    git submodule foreach \
+      'git log --no-merges --oneline --since="1 year ago" --date=short --pretty=format:"**%ad:** [$name] %s  " | 
+      grep -v -e "Apply Linting & Formatting Fixes" -e "Apply Prettier Formatting Fixes" | 
+      grep -vi "sitemap" |
+      cat && echo' \
+      | grep -v ^Entering | sort -r -o nginx/static/mdx/logs.mdx
+
     # extract commit hashes for each microservice
     echo "Extracting commit hashes for microservices..."
+
+    # Unset GIT_DIR and GIT_WORK_TREE to work with submodules
+    unset GIT_DIR
+    unset GIT_WORK_TREE
     
     # Main services
     export IMAGE_TAG_WEB=$(git -C web log --pretty=format:'%h' -n 1)
@@ -83,15 +96,6 @@ while read oldrev newrev ref; do
     echo "  members: $IMAGE_TAG_MEMBERS"
     echo "  events: $IMAGE_TAG_EVENTS"
     echo "  users: $IMAGE_TAG_USERS"
-
-    # update changelog
-    echo "Updating changelog..."
-    git submodule foreach \
-      'git log --no-merges --oneline --since="1 year ago" --date=short --pretty=format:"**%ad:** [$name] %s  " | 
-      grep -v -e "Apply Linting & Formatting Fixes" -e "Apply Prettier Formatting Fixes" | 
-      grep -vi "sitemap" |
-      cat && echo' \
-      | grep -v ^Entering | sort -r -o nginx/static/mdx/logs.mdx
 
     # deploy new images with commit hash tags
     echo "Building and deploying services..."
