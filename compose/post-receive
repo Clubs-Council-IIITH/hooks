@@ -61,7 +61,7 @@ while read oldrev newrev ref; do
     # Check if the docker images with these tags exist, if not, fallback to 'latest'
     for service in web gateway auth files interfaces clubs members events users; do
       image_name="$PROJECT_PREFIX$service"
-      image_tag_var="IMAGE_TAG_$(echo $service | tr '[:lower:]' '[:upper:]')"
+      image_tag_var="IMAGE_TAG_${service^^}"
       image_tag=${!image_tag_var}
       if [[ -z $(docker images -q "$image_name:$image_tag") ]]; then
         echo "Image $image_name with tag $image_tag not found. Falling back to 'latest' tag."
