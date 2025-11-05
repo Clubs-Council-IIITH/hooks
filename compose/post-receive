@@ -46,17 +46,17 @@ while read oldrev newrev ref; do
     echo "Extracting commit hashes for microservices..."
     
     # Main services
-    export IMAGE_TAG_WEB=$(cd web && git log --pretty=format:'%h' -n 1)
-    export IMAGE_TAG_GATEWAY=$(cd gateway && git log --pretty=format:'%h' -n 1)
-    export IMAGE_TAG_AUTH=$(cd apis/auth && git log --pretty=format:'%h' -n 1)
-    export IMAGE_TAG_FILES=$(cd apis/files && git log --pretty=format:'%h' -n 1)
+    export IMAGE_TAG_WEB=$(git -C web log --pretty=format:'%h' -n 1)
+    export IMAGE_TAG_GATEWAY=$(git -C gateway log --pretty=format:'%h' -n 1)
+    export IMAGE_TAG_AUTH=$(git -C apis/auth log --pretty=format:'%h' -n 1)
+    export IMAGE_TAG_FILES=$(git -C apis/files log --pretty=format:'%h' -n 1)
     
     # Subgraphs
-    export IMAGE_TAG_INTERFACES=$(cd subgraphs/interfaces && git log --pretty=format:'%h' -n 1)
-    export IMAGE_TAG_CLUBS=$(cd subgraphs/clubs && git log --pretty=format:'%h' -n 1)
-    export IMAGE_TAG_MEMBERS=$(cd subgraphs/members && git log --pretty=format:'%h' -n 1)
-    export IMAGE_TAG_EVENTS=$(cd subgraphs/events && git log --pretty=format:'%h' -n 1)
-    export IMAGE_TAG_USERS=$(cd subgraphs/users && git log --pretty=format:'%h' -n 1)
+    export IMAGE_TAG_INTERFACES=$(git -C subgraphs/interfaces log --pretty=format:'%h' -n 1)
+    export IMAGE_TAG_CLUBS=$(git -C subgraphs/clubs log --pretty=format:'%h' -n 1)
+    export IMAGE_TAG_MEMBERS=$(git -C subgraphs/members log --pretty=format:'%h' -n 1)
+    export IMAGE_TAG_EVENTS=$(git -C subgraphs/events log --pretty=format:'%h' -n 1)
+    export IMAGE_TAG_USERS=$(git -C subgraphs/users log --pretty=format:'%h' -n 1)
 
     # Check if the docker images with these tags exist, if not, fallback to 'latest'
     for service in web gateway auth files interfaces clubs members events users; do
