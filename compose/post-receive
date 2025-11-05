@@ -34,6 +34,9 @@ while read oldrev newrev ref; do
     # configure local submodule repos
     if [ -f .gitmodules ]; then
       sed -i "s|git@github.com:Clubs-Council-IIITH|$HOME|g" .gitmodules
+      echo "Configured local submodule repositories."
+    else
+      echo ".gitmodules file not found!"
     fi
 
     # git submodule add -b origin/$branch $HOME/services.git
