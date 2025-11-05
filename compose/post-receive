@@ -21,6 +21,7 @@ while read oldrev newrev ref; do
 
     # get commit hash for main repo
     COMMIT_HASH=$(git rev-parse HEAD | head -c 7)
+    echo "Current services commit hash: $COMMIT_HASH"
 
     # update status
     echo "Updating deployment status..."
