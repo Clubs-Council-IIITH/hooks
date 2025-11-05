@@ -108,8 +108,8 @@ while read oldrev newrev ref; do
     fi
 
     # clean up worktree
-    rm -rf ./services
-    git checkout -f $branch
+    # rm -rf ./services
+    # git checkout -f $branch
 
     echo "Deployed [$branch] successfully!"
   else
