@@ -19,22 +19,69 @@ while read oldrev newrev ref; do
     git checkout -f $branch
     cd $GIT_WORK_TREE
 
+    # get commit hash for main repo
+    COMMIT_HASH=$(git rev-parse HEAD | head -c 7)
+
     # update status
     echo "Updating deployment status..."
     echo `jq \
-      --arg commit "$(git rev-parse HEAD | head -c 7)" \
+      --arg commit "$COMMIT_HASH" \
       --arg timestamp "$(TZ='Asia/Kolkata' date --iso-8601=ns | cut -d, -f1)" \
       --arg environment "$branch" \
       '.commit = $commit | .timestamp = $timestamp | .environment = $environment' \
       nginx/static/json/status.json` > nginx/static/json/status.json
 
     # configure local submodule repos
-    sed -i "s|git@github.com:Clubs-Council-IIITH|$HOME|g" .gitmodules
-    git submodule add -b origin/$branch $HOME/services.git
-    rm services/.gitmodules
+    if [ -f .gitmodules ]; then
+      sed -i "s|git@github.com:Clubs-Council-IIITH|$HOME|g" .gitmodules
+      echo "Configured local submodule repositories."
+    else
+      echo ".gitmodules file not found!"
+    fi
+
+    # git submodule add -b origin/$branch $HOME/services.git
+    # rm services/.gitmodules
 
     # pull submodules (except auth-dev)
     git -c submodule.apis/auth-dev.update=none submodule update --init
+
+    # extract commit hashes for each microservice
+    echo "Extracting commit hashes for microservices..."
+    
+    # Main services
+    export IMAGE_TAG_WEB=$(git -C web log --pretty=format:'%h' -n 1)
+    export IMAGE_TAG_GATEWAY=$(git -C gateway log --pretty=format:'%h' -n 1)
+    export IMAGE_TAG_AUTH=$(git -C apis/auth log --pretty=format:'%h' -n 1)
+    export IMAGE_TAG_FILES=$(git -C apis/files log --pretty=format:'%h' -n 1)
+    
+    # Subgraphs
+    export IMAGE_TAG_INTERFACES=$(git -C subgraphs/interfaces log --pretty=format:'%h' -n 1)
+    export IMAGE_TAG_CLUBS=$(git -C subgraphs/clubs log --pretty=format:'%h' -n 1)
+    export IMAGE_TAG_MEMBERS=$(git -C subgraphs/members log --pretty=format:'%h' -n 1)
+    export IMAGE_TAG_EVENTS=$(git -C subgraphs/events log --pretty=format:'%h' -n 1)
+    export IMAGE_TAG_USERS=$(git -C subgraphs/users log --pretty=format:'%h' -n 1)
+
+    # Check if the docker images with these tags exist, if not, fallback to 'latest'
+    for service in web gateway auth files interfaces clubs members events users; do
+      image_name="$PROJECT_PREFIX$service"
+      image_tag_var="IMAGE_TAG_${service^^}"
+      image_tag=${!image_tag_var}
+      if [[ -z $(docker images -q "$image_name:$image_tag") ]]; then
+        echo "Image $image_name with tag $image_tag not found. Falling back to 'latest' tag."
+        export $image_tag_var="latest"
+      fi
+    done
+
+    echo "Using Image tags:"
+    echo "  web: $IMAGE_TAG_WEB"
+    echo "  gateway: $IMAGE_TAG_GATEWAY"
+    echo "  auth: $IMAGE_TAG_AUTH"
+    echo "  files: $IMAGE_TAG_FILES"
+    echo "  interfaces: $IMAGE_TAG_INTERFACES"
+    echo "  clubs: $IMAGE_TAG_CLUBS"
+    echo "  members: $IMAGE_TAG_MEMBERS"
+    echo "  events: $IMAGE_TAG_EVENTS"
+    echo "  users: $IMAGE_TAG_USERS"
 
     # update changelog
     echo "Updating changelog..."
@@ -45,7 +92,8 @@ while read oldrev newrev ref; do
       cat && echo' \
       | grep -v ^Entering | sort -r -o nginx/static/mdx/logs.mdx
 
-    # deploy new images
+    # deploy new images with commit hash tags
+    echo "Building and deploying services..."
     docker compose -f docker-compose.$branch.yml -p $PROJECT_PREFIX$branch up --build -d
 
     # verify build status
@@ -63,4 +111,3 @@ while read oldrev newrev ref; do
     echo "Ref $ref received. Doing nothing: only [${BRANCHES[*]}] may be deployed on this server."
   fi
 done
-
