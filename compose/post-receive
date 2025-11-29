@@ -64,7 +64,7 @@ while read oldrev newrev ref; do
     
     # Main services
     export IMAGE_TAG_WEB=$(git -C web log --pretty=format:'%h' -n 1)
-    export IMAGE_TAG_GATEWAY=$(git -C gateway log --pretty=format:'%h' -n 1)
+    # export IMAGE_TAG_GATEWAY=$(git -C gateway log --pretty=format:'%h' -n 1)
     export IMAGE_TAG_AUTH=$(git -C apis/auth log --pretty=format:'%h' -n 1)
     export IMAGE_TAG_FILES=$(git -C apis/files log --pretty=format:'%h' -n 1)
     
@@ -88,7 +88,7 @@ while read oldrev newrev ref; do
 
     echo "Using Image tags:"
     echo "  web: $IMAGE_TAG_WEB"
-    echo "  gateway: $IMAGE_TAG_GATEWAY"
+    # echo "  gateway: $IMAGE_TAG_GATEWAY"
     echo "  auth: $IMAGE_TAG_AUTH"
     echo "  files: $IMAGE_TAG_FILES"
     echo "  interfaces: $IMAGE_TAG_INTERFACES"
