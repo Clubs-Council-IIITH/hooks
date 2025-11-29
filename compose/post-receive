@@ -101,6 +101,9 @@ while read oldrev newrev ref; do
     echo "Building and deploying services..."
     docker compose -f docker-compose.$branch.yml -p $PROJECT_PREFIX$branch up --build -d
 
+    # Force restart gateway to pick up new subgraph schemas
+    docker compose -f docker-compose.$branch.yml -p $PROJECT_PREFIX$branch restart gateway
+
     # verify build status
     if [ $? -ne 0 ]; then
       echo "Build failed! Aborting."
