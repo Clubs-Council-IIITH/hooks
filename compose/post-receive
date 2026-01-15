@@ -2,6 +2,7 @@
 
 # config
 BRANCHES=("prod" "staging")
+SERVICES="web gateway auth files interfaces clubs members events users"
 PROJECT_PREFIX="cc-"
 WORK_TREE_DIR="/home/git/worktrees"
 
@@ -46,11 +47,16 @@ while read oldrev newrev ref; do
     # pull submodules (except auth-dev)
     git -c submodule.apis/auth-dev.update=none submodule update --init
 
+    # if not staging then exclude auth-wrapper
+    if [[ "$branch" != "staging"  ]]; then
+      git -c submodule.apis/auth-wrapper.update=none submodule update --init
+    fi
+
     # update changelog
     echo "Updating changelog..."
     git submodule foreach \
-      'git log --no-merges --oneline --since="1 year ago" --date=short --pretty=format:"**%ad:** [$name] %s  " | 
-      grep -v -e "Apply Linting & Formatting Fixes" -e "Apply Prettier Formatting Fixes" | 
+      'git log --no-merges --oneline --since="1 year ago" --date=short --pretty=format:"**%ad:** [$name] %s  " |
+      grep -v -e "Apply Linting & Formatting Fixes" -e "Apply Prettier Formatting Fixes" |
       grep -vi "sitemap" |
       cat && echo' \
       | grep -v ^Entering | sort -r -o nginx/static/mdx/logs.mdx
@@ -61,13 +67,14 @@ while read oldrev newrev ref; do
     # Unset GIT_DIR and GIT_WORK_TREE to work with submodules
     unset GIT_DIR
     unset GIT_WORK_TREE
-    
+
     # Main services
     export IMAGE_TAG_WEB=$(git -C web log --pretty=format:'%h' -n 1)
     export IMAGE_TAG_GATEWAY=$(git -C gateway log --pretty=format:'%h' -n 1)
     export IMAGE_TAG_AUTH=$(git -C apis/auth log --pretty=format:'%h' -n 1)
+    export IMAGE_TAG_AUTH_WRAPPER=$(git -C apis/auth-wrapper log --pretty=format:'%h' -n 1)
     export IMAGE_TAG_FILES=$(git -C apis/files log --pretty=format:'%h' -n 1)
-    
+
     # Subgraphs
     export IMAGE_TAG_INTERFACES=$(git -C subgraphs/interfaces log --pretty=format:'%h' -n 1)
     export IMAGE_TAG_CLUBS=$(git -C subgraphs/clubs log --pretty=format:'%h' -n 1)
@@ -75,8 +82,13 @@ while read oldrev newrev ref; do
     export IMAGE_TAG_EVENTS=$(git -C subgraphs/events log --pretty=format:'%h' -n 1)
     export IMAGE_TAG_USERS=$(git -C subgraphs/users log --pretty=format:'%h' -n 1)
 
+    # conditionally add auth-wrapper if the branch is staging
+    if [[ "$branch" == "staging" ]]; then
+      SERVICES="$SERVICES auth-wrapper"
+    fi
+
     # Check if the docker images with these tags exist, if not, fallback to 'latest'
-    for service in web gateway auth files interfaces clubs members events users; do
+    for service in $SERVICES; do
       image_name="$PROJECT_PREFIX$service"
       image_tag_var="IMAGE_TAG_${service^^}"
       image_tag=${!image_tag_var}
@@ -90,6 +102,7 @@ while read oldrev newrev ref; do
     echo "  web: $IMAGE_TAG_WEB"
     echo "  gateway: $IMAGE_TAG_GATEWAY"
     echo "  auth: $IMAGE_TAG_AUTH"
+    echo "  auth-wrapper: $IMAGE_TAG_AUTH_WRAPPER"
     echo "  files: $IMAGE_TAG_FILES"
     echo "  interfaces: $IMAGE_TAG_INTERFACES"
     echo "  clubs: $IMAGE_TAG_CLUBS"
