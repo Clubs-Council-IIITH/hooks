@@ -71,6 +71,7 @@ while read oldrev newrev ref; do
     export IMAGE_TAG_WEB=$(git -C web log --pretty=format:'%h' -n 1)
     export IMAGE_TAG_GATEWAY=$(git -C gateway log --pretty=format:'%h' -n 1)
     export IMAGE_TAG_AUTH=$(git -C apis/auth log --pretty=format:'%h' -n 1)
+    export IMAGE_TAG_AUTH_DEV=$(git -C apis/auth-dev log --pretty=format:'%h' -n 1)
     export IMAGE_TAG_AUTH_WRAPPER=$(git -C apis/auth-wrapper log --pretty=format:'%h' -n 1)
     export IMAGE_TAG_FILES=$(git -C apis/files log --pretty=format:'%h' -n 1)
 
@@ -83,13 +84,14 @@ while read oldrev newrev ref; do
 
     # conditionally add auth-wrapper if the branch is staging
     if [[ "$branch" == "staging" ]]; then
-      SERVICES="$SERVICES auth-wrapper"
+      SERVICES="$SERVICES auth-wrapper auth-dev"
     fi
 
     # Check if the docker images with these tags exist, if not, fallback to 'latest'
     for service in $SERVICES; do
       image_name="$PROJECT_PREFIX$service"
       image_tag_var="IMAGE_TAG_${service^^}"
+      image_tag_var="${image_tag_var//-/_}"
       image_tag=${!image_tag_var}
       if [[ -z $(docker images -q "$image_name:$image_tag") ]]; then
         echo "Image $image_name with tag $image_tag not found. Falling back to 'latest' tag."
@@ -101,6 +103,7 @@ while read oldrev newrev ref; do
     echo "  web: $IMAGE_TAG_WEB"
     echo "  gateway: $IMAGE_TAG_GATEWAY"
     echo "  auth: $IMAGE_TAG_AUTH"
+    echo "  auth-dev: $IMAGE_TAG_AUTH_DEV"
     echo "  auth-wrapper: $IMAGE_TAG_AUTH_WRAPPER"
     echo "  files: $IMAGE_TAG_FILES"
     echo "  interfaces: $IMAGE_TAG_INTERFACES"
