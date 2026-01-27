@@ -2,7 +2,7 @@
 
 # config
 BRANCHES=("prod" "staging")
-SERVICES="web gateway auth files interfaces clubs members events users"
+SERVICES="web gateway files interfaces clubs members events users"
 PROJECT_PREFIX="cc-"
 WORK_TREE_DIR="/home/git/worktrees"
 
@@ -72,9 +72,6 @@ while read oldrev newrev ref; do
     # Main services
     export IMAGE_TAG_WEB=$(git -C web log --pretty=format:'%h' -n 1)
     export IMAGE_TAG_GATEWAY=$(git -C gateway log --pretty=format:'%h' -n 1)
-    export IMAGE_TAG_AUTH=$(git -C apis/auth log --pretty=format:'%h' -n 1)
-    export IMAGE_TAG_AUTH_DEV=$(git -C apis/auth-dev log --pretty=format:'%h' -n 1)
-    export IMAGE_TAG_AUTH_WRAPPER=$(git -C apis/auth-wrapper log --pretty=format:'%h' -n 1)
     export IMAGE_TAG_FILES=$(git -C apis/files log --pretty=format:'%h' -n 1)
 
     # Subgraphs
@@ -87,6 +84,11 @@ while read oldrev newrev ref; do
     # conditionally add auth-wrapper if the branch is staging
     if [[ "$branch" == "staging" ]]; then
       SERVICES="$SERVICES auth-wrapper auth-dev"
+      export IMAGE_TAG_AUTH_DEV=$(git -C apis/auth-dev log --pretty=format:'%h' -n 1)
+      export IMAGE_TAG_AUTH_WRAPPER=$(git -C apis/auth-wrapper log --pretty=format:'%h' -n 1)
+    else
+      SERVICES="$SERVICES auth"
+      export IMAGE_TAG_AUTH=$(git -C apis/auth log --pretty=format:'%h' -n 1)
     fi
 
     # Check if the docker images with these tags exist, if not, fallback to 'latest'
@@ -104,9 +106,12 @@ while read oldrev newrev ref; do
     echo "Using Image tags:"
     echo "  web: $IMAGE_TAG_WEB"
     echo "  gateway: $IMAGE_TAG_GATEWAY"
-    echo "  auth: $IMAGE_TAG_AUTH"
-    echo "  auth-dev: $IMAGE_TAG_AUTH_DEV"
-    echo "  auth-wrapper: $IMAGE_TAG_AUTH_WRAPPER"
+    if [[ "$branch" == "staging" ]]; then
+      echo "  auth-dev: $IMAGE_TAG_AUTH_DEV"
+      echo "  auth-wrapper: $IMAGE_TAG_AUTH_WRAPPER"
+    else
+      echo "  auth: $IMAGE_TAG_AUTH"
+    fi
     echo "  files: $IMAGE_TAG_FILES"
     echo "  interfaces: $IMAGE_TAG_INTERFACES"
     echo "  clubs: $IMAGE_TAG_CLUBS"
