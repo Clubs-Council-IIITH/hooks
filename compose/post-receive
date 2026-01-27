@@ -121,22 +121,123 @@ while read oldrev newrev ref; do
 
     # deploy new images with commit hash tags
     echo "Building and deploying services..."
-    docker compose -f docker-compose.$branch.yml -p $PROJECT_PREFIX$branch up --build -d
 
-    # Force restart gateway to pick up new subgraph schemas
-    docker compose -f docker-compose.$branch.yml -p $PROJECT_PREFIX$branch restart gateway
+    # Check for envsubst
+    if ! command -v envsubst &> /dev/null; then
+        echo "Error: envsubst not found. Please install gettext-base."
+        exit 1
+    fi
 
+    # Migration: Check for legacy containers and stop them
+    # This is mostly needed only for the first run after architecture change
+    LEGACY_MONGO="${PROJECT_PREFIX}${branch}-mongo-1"
+    LEGACY_NGINX="${PROJECT_PREFIX}${branch}-nginx-1"
+    
+    if [ -n "$(docker ps -q -f name=$LEGACY_MONGO)" ]; then
+        echo "Stopping legacy mongo to allow shared stack to start..."
+        docker stop $LEGACY_MONGO || true
+        docker rm $LEGACY_MONGO || true
+    fi
+    
+    if [ -n "$(docker ps -q -f name=$LEGACY_NGINX)" ]; then
+        echo "Stopping legacy nginx to allow shared stack to start..."
+        docker stop $LEGACY_NGINX || true
+        docker rm $LEGACY_NGINX || true
+    fi
+
+    # Ensure shared services (mongo, nginx) are running
+    echo "Checking shared services..."
+    docker compose -f docker-compose.shared.$branch.yml -p $PROJECT_PREFIX$branch-shared up -d
+
+    # Determine active color
+    ACTIVE_COLOR_FILE="/home/git/active_color_$branch"
+    if [ -f "$ACTIVE_COLOR_FILE" ]; then
+      CURRENT_COLOR=$(cat "$ACTIVE_COLOR_FILE")
+    else
+      CURRENT_COLOR="blue"
+    fi
+
+    if [ "$CURRENT_COLOR" == "blue" ]; then
+      NEW_COLOR="green"
+    else
+      NEW_COLOR="blue"
+    fi
+
+    echo "Current active color: $CURRENT_COLOR"
+    echo "Deploying to: $NEW_COLOR"
+
+    # Deploy new stack
+    export PROJECT_NAME="$PROJECT_PREFIX$branch-$NEW_COLOR"
+    docker compose -f docker-compose.$branch.yml -p $PROJECT_NAME up --build -d
     # verify build status
     if [ $? -ne 0 ]; then
       echo "Build failed! Aborting."
       exit 1
     fi
+    
+    # Force restart gateway to pick up new subgraph schemas
+    docker compose -f docker-compose.$branch.yml -p $PROJECT_NAME restart gateway
+
+    # Wait for new gateway to be healthy
+    echo "Waiting for new gateway to be healthy..."
+    attempt=0
+    max_attempts=60 # 5 minutes
+    while [ $attempt -lt $max_attempts ]; do
+      # Check if gateway container is running and healthy
+      container_name="${PROJECT_NAME}-gateway-1"
+      
+      # Check if container exists
+      if [ -z "$(docker ps -q -f name=$container_name)" ]; then
+         echo "Container $container_name not found yet..."
+      else
+         status=$(docker inspect --format='{{.State.Health.Status}}' $container_name 2>/dev/null)
+         if [ "$status" == "healthy" ]; then
+           echo "New gateway ($container_name) is healthy."
+           break
+         fi
+         echo "Waiting for gateway health ($status)... ($attempt/$max_attempts)"
+      fi
+      
+      sleep 5
+      attempt=$((attempt+1))
+    done
+
+    if [ $attempt -eq $max_attempts ]; then
+      echo "Gateway failed to become healthy. Aborting deployment."
+      docker compose -f docker-compose.$branch.yml -p $PROJECT_NAME down
+      exit 1
+    fi
+
+    # Update Nginx configuration
+    echo "Updating Nginx configuration..."
+    
+    # Set VIRTUAL_HOST based on branch
+    if [ "$branch" == "prod" ]; then
+        export VIRTUAL_HOST="clubs.iiit.ac.in"
+    else
+        export VIRTUAL_HOST="dev-clubs.iiit.ac.in"
+    fi
+
+    # Generate app.conf from template    
+    envsubst '${PROJECT_NAME} ${VIRTUAL_HOST}' < nginx/app.conf.template > nginx/app.conf
+
+    # Reload Nginx (in shared stack)
+    echo "Reloading Nginx..."
+    docker compose -f docker-compose.shared.$branch.yml -p $PROJECT_PREFIX$branch-shared exec -T nginx nginx -s reload
+
+    # Update active color file
+    echo "$NEW_COLOR" > "$ACTIVE_COLOR_FILE"
+
+    # Stop old stack
+    echo "Stopping old stack ($CURRENT_COLOR)..."
+    OLD_PROJECT_NAME="$PROJECT_PREFIX$branch-$CURRENT_COLOR"
+    docker compose -f docker-compose.$branch.yml -p $OLD_PROJECT_NAME down
 
     # clean up worktree
     # rm -rf ./services
     # git checkout -f $branch
 
-    echo "Deployed [$branch] successfully!"
+    echo "Deployed [$branch] successfully to $NEW_COLOR!"
   else
     echo "Ref $ref received. Doing nothing: only [${BRANCHES[*]}] may be deployed on this server."
   fi
