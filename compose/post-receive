@@ -44,11 +44,13 @@ while read oldrev newrev ref; do
     # git submodule add -b origin/$branch $HOME/services.git
     # rm services/.gitmodules
 
-    # if not staging then exclude auth-wrapper other wise exclude auth-dev
+    # if not staging then exclude auth-wrapper and auth-dev other wise exclude auth
     if [[ "$branch" != "staging"  ]]; then
-      git -c submodule.apis/auth-wrapper.update=none submodule update --init
+      git -c submodule.apis/auth-wrapper.update=none \
+          -c submodule.apis/auth-dev.update=none \
+          submodule update --init
     else
-      git -c submodule.apis/auth-dev.update=none submodule update --init
+      git -c submodule.apis/auth.update=none submodule update --init
     fi
 
     # update changelog
